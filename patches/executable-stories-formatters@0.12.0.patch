@@ -1,0 +1,31 @@
+diff --git a/dist/index.js b/dist/index.js
+index 4a501c4f84e04ffcc1f1bf2f49874bb429fa78e6..b2b61035cb584031c8fe71187db4e0b7168b9b3a 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -14170,7 +14170,7 @@ function renderDocEntry(entry, deps) {
+     default:
+       html = "";
+   }
+-  if (entry.children && entry.children.length > 0) {
++  if (Array.isArray(entry.children) && entry.children.length > 0) {
+     const childrenHtml = entry.children.map((child) => renderDocEntry(child, deps)).join("");
+     html += `<div class="doc-children">${childrenHtml}</div>`;
+   }
+@@ -15564,7 +15564,7 @@ var MarkdownFormatter = class {
+         lines.push(`${indent}`);
+         break;
+     }
+-    if (entry.children && entry.children.length > 0) {
++    if (Array.isArray(entry.children) && entry.children.length > 0) {
+       const childIndent = indent + "  ";
+       for (const child of entry.children) {
+         this.renderDocEntry(lines, child, childIndent);
+@@ -17884,7 +17884,7 @@ ${tc.errorStack}` : "");
+         content.push(codeBlock(JSON.stringify(entry.data ?? null, null, 2), "json"));
+         break;
+     }
+-    if (entry.children && entry.children.length > 0) {
++    if (Array.isArray(entry.children) && entry.children.length > 0) {
+       for (const child of entry.children) {
+         this.renderDocEntry(content, child);
+       }
