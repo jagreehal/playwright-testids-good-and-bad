@@ -15,6 +15,10 @@ describe('Order table — scope by structure before adding ids', () => {
 
     story.when('the test finds the INV-002 row and scopes the Refund button inside it')
     const rowHeader = screen.getByRole('rowheader', { name: 'INV-002' })
+    // Row scoping is the point of this example: find the row header, then walk to
+    // its <tr> to bound the query. Testing Library's docs endorse closest() here,
+    // so this is the rare justified exception to no-node-access.
+    // eslint-disable-next-line testing-library/no-node-access
     const row = rowHeader.closest('tr')
     await user.click(within(row!).getByRole('button', { name: 'Refund' }))
 

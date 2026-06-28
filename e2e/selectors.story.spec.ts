@@ -120,4 +120,61 @@ test.describe('Selectors in the browser — good vs bad', () => {
     await expect(page.getByTestId('monthly-sales-chart')).toBeVisible()
     await expect(page.getByTestId('loading-spinner')).toBeVisible()
   })
+
+  test('GOOD vs BAD: a search box keeps a name with a label, loses it with a placeholder', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['e2e', 'search'] })
+    story.given('the demo page')
+    await page.goto('/')
+
+    story.when('the good search box carries an sr-only label')
+    const good = page.getByRole('region', { name: 'Search input (sr-only label)' })
+
+    story.then('it is reachable by role and by label, the way a user perceives it')
+    await expect(good.getByRole('searchbox', { name: 'Search products' })).toBeVisible()
+    await expect(good.getByLabel('Search products')).toBeVisible()
+
+    story.and('the placeholder-only version has no label to find')
+    const bad = page.getByRole('region', { name: 'Search input (placeholder only)' })
+    await expect(bad.getByLabel('Search products')).toHaveCount(0)
+    await expect(bad.getByPlaceholder('Search products')).toBeVisible()
+  })
+
+  test('GOOD: a third-party combobox is named from the wrapper you own', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['e2e', 'date-picker'] })
+    story.given('the demo page')
+    await page.goto('/')
+
+    story.when('the wrapper supplies the label the widget shipped without')
+    const good = page.getByRole('region', { name: 'Date picker (named from the wrapper)' })
+
+    story.then('the combobox is found by the name your label gives it')
+    await expect(good.getByRole('combobox', { name: 'Choose date' })).toBeVisible()
+
+    story.and('the fallback widget paints into a canvas, so there is no combobox to reach at all')
+    const fallback = page.getByRole('region', { name: 'Date picker (test id fallback)' })
+    await expect(fallback.getByRole('combobox')).toHaveCount(0)
+    await expect(fallback.getByTestId('booking-date-field')).toBeVisible() // the only handle
+  })
+
+  test('BAD: the buggy promo ribbon leaves an empty box a text inversion misses', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['e2e', 'bad', 'promo'] })
+    story.given('the demo page')
+    await page.goto('/')
+
+    story.when('the good promo banner has a role, so it is announced and queryable')
+    const banner = page.getByRole('region', { name: 'Promo banner (role gives identity)' })
+    await expect(banner.getByRole('status')).toHaveText('50% off today')
+
+    story.then('the buggy ribbon renders with no message, yet still mounts an empty wrapper')
+    const buggy = page.getByRole('region', { name: 'Promo ribbon (buggy — text inversion lies)' })
+    await expect(buggy.getByText('50% off today')).toHaveCount(0) // a text inversion is satisfied here
+    await expect(buggy.getByTestId('promo-ribbon')).toBeVisible() // but the box is on screen
+    await expect(buggy.getByTestId('promo-ribbon')).toHaveText('') // empty, which only an element query catches
+  })
 })

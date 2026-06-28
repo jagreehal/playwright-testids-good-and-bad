@@ -47,9 +47,9 @@ Testing Library's priority guide is broader than this tree. This tree is the rep
 
 The asymmetry between the top of that chart and the bottom is the whole lesson. A role query that passes also proves the element is reachable. A test id that passes tells you a string exists in the DOM and nothing else.
 
-## The four moves to watch for
+## The seven moves to watch for
 
-Reading about this settles nothing, so the suites make it concrete. Four patterns recur.
+Reading about this settles nothing, so the suites make it concrete. Seven patterns recur.
 
 ### 1. The bad selector passes anyway
 
@@ -152,6 +152,62 @@ await expect(region.getByLabel('Email address')).toHaveCount(0) // the label sel
 ```
 
 axe and role queries catch different bugs. Here the label selector is the safety net, and axe is not. Neither alone is enough.
+
+### 5. The aria-label that exists only for the test
+
+This one looks like the accessible choice and is the opposite. The reviews section already has a heading that names it. You want a stable handle, you have read that test ids are a smell, so you add `aria-label="reviews-section"` and grab the region by that name. You just replaced the heading with a slug in the accessibility tree, because aria-label outranks the visible heading when the browser computes the name.
+
+```tsx
+// src/examples/ReviewsSection.tsx (bad)
+<section aria-label="reviews-section">
+  <h2>Customer reviews</h2>
+```
+
+```ts
+// tests/component/aria-label-for-tests.story.test.tsx
+expect(screen.getByRole('heading', { name: 'Customer reviews' })).toBeInTheDocument() // the eye reads this
+expect(screen.queryByRole('region', { name: 'Customer reviews' })).toBeNull()          // the screen reader does not
+expect(screen.getByRole('region', { name: 'reviews-section' })).toBeInTheDocument()     // it hears the slug
+```
+
+A `data-testid` would have stayed out of the accessibility tree. This slug lands in it and gets announced on landmark navigation, so the move people pick to dodge a test id ships a worse result than the test id. Save aria-label for the case the `ReviewsFilter` example shows: a toolbar with no heading, where you write a name a user would want to hear and the test reuses it. Ask one question before you type it. Would you ship this name to a screen reader if no test existed? "Filter reviews" earns its place. "reviews-section" does not.
+
+### 6. The click test passes, the keyboard test does not
+
+`userEvent.click` fires a click handler on anything, so the bad login form's submit, a `<div onClick>`, passes a click test and reads as working. A keyboard user gets a different result. They Tab to the control and the div is not in the tab order, so focus skips it and Enter never reaches the handler. The e2e story drives a real browser to show the gap.
+
+```ts
+// e2e/keyboard.story.spec.ts (good)
+await region.getByLabel('Email address').focus()
+await page.keyboard.press('Tab')                                   // password
+await page.keyboard.press('Tab')                                   // Sign in
+await expect(region.getByRole('button', { name: 'Sign in' })).toBeFocused()
+
+// against the bad version: the div is skipped and never takes focus
+await region.getByPlaceholder('Password').focus()
+await page.keyboard.press('Tab')
+await expect(region.getByText('Sign in')).not.toBeFocused()
+```
+
+Role queries reject the div because it has no button role. The keyboard test shows why that rejection protects a real user, not just a screen-reader one.
+
+### 7. The negative test that proves nothing
+
+This is the thread's strongest pro-test-id case. A wrapper renders only when an optional prop is set, and its only content is that same optional text. The common advice is to test it by text, then invert the query for the absent case. The inversion proves nothing on its own. With the text gone, a text query cannot tell an absent wrapper from a present-but-empty one, so a bug that leaves an empty box on screen still reports green.
+
+```tsx
+// tests/component/promo-banner.story.test.tsx
+render(<PromoRibbonBuggy />)                                  // no message, but the wrapper still mounts
+expect(screen.queryByText('50% off today')).toBeNull()           // green, and misleading
+expect(screen.getByTestId('promo-ribbon')).toBeEmptyDOMElement() // the empty box is still there
+```
+
+Give the element a role and the absence becomes provable. A promo banner is an announcement, so `role="status"` is honest markup, and `queryByRole` asserts the element itself, not its text. When the wrapper is pure decoration and no role fits, the test id is the only handle left, and this is the case where it is the only solution.
+
+```tsx
+expect(screen.queryByRole('status')).toBeNull()         // role gives identity: absence asserts the element
+expect(screen.queryByTestId('promo-ribbon')).toBeNull() // no role fits: the test id is the only honest handle
+```
 
 ## More good and bad pairs
 
@@ -292,6 +348,45 @@ And the anti-pattern, a test id on every nesting level, where none of them ident
 </div>
 ```
 
+### Search input
+
+A placeholder is a hint, not a label. It disappears the moment the user types, and screen-reader support for it as a name is inconsistent. Give the box a real name. Hide the label with `sr-only` when the design wants no visible caption, or use aria-label when nothing visible names it.
+
+```tsx
+// bad: only a placeholder, so getByLabelText finds nothing
+<input type="search" placeholder="Search products" />
+
+// good: an associated label, hidden from view but not from the name
+const id = useId()                                  // unique per instance, so two boxes never collide
+<label htmlFor={id} className="sr-only">Search products</label>
+<input id={id} type="search" placeholder="Try 'wireless headphones'" />
+```
+
+```tsx
+screen.getByRole('searchbox', { name: 'Search products' })  // good, and getByLabelText finds it too
+screen.getByPlaceholderText('Search products')              // bad: the query Testing Library ranks last
+```
+
+### Third-party widget you cannot edit
+
+Two widgets, two outcomes. If the library renders a real control — say an `<input role="combobox">` with no name — you own the wrapper, so name it there with a `<label>`. Use `useId()` for the id so a second instance does not cross-wire its label. If the library paints into a canvas or a closed shadow root, it puts nothing in the accessibility tree, and the wrapper test id is the only handle left.
+
+```tsx
+// good: the widget exposes a control, so your label closes the gap it left
+const id = useId()
+<label htmlFor={id}>Choose date</label>
+<ThirdPartyDatePicker id={id} />          // renders <input role="combobox">
+
+// fallback: the widget paints into a canvas — no role, nothing to name or label
+<div data-testid="booking-date-field"><ThirdPartyCanvasPicker /></div>
+```
+
+```tsx
+screen.getByRole('combobox', { name: 'Choose date' })  // good
+screen.queryByRole('combobox')                         // fallback: null — there is no control to reach
+screen.getByTestId('booking-date-field')               // fallback: the only handle, assert your field rendered
+```
+
 ## Getting there when the role query fails
 
 When a role query fails, the markup is usually one change from reachable, and the change is worth making because a user benefits from the same fix. The moves that get you there:
@@ -334,6 +429,11 @@ Each component exports its good and bad variants, paired with the tests that pro
 | Page object over `getByRole` vs page object over `getByTestId` | [`src/examples/ReviewActions.tsx`](src/examples/ReviewActions.tsx) | [`selectors-api`](tests/component/selectors-api.story.test.tsx) |
 | Naming: `button-1` vs `profile-save-button` | [`src/examples/SaveButtons.tsx`](src/examples/SaveButtons.tsx) | [`naming`](tests/component/naming.story.test.tsx) |
 | Wrapper soup: a test id on every nesting level | [`src/examples/PaymentStatus.tsx`](src/examples/PaymentStatus.tsx) (`WrapperSoup`) | [`naming`](tests/component/naming.story.test.tsx) |
+| An aria-label added only for the test vs the heading as the name | [`src/examples/ReviewsSection.tsx`](src/examples/ReviewsSection.tsx) | [`aria-label-for-tests`](tests/component/aria-label-for-tests.story.test.tsx) |
+| A real label vs a placeholder doing a label's job | [`src/examples/SearchInput.tsx`](src/examples/SearchInput.tsx) | [`search-input`](tests/component/search-input.story.test.tsx), [`selectors`](e2e/selectors.story.spec.ts) |
+| A third-party combobox named from the wrapper you own | [`src/examples/DatePickerField.tsx`](src/examples/DatePickerField.tsx) | [`date-picker-field`](tests/component/date-picker-field.story.test.tsx), [`selectors`](e2e/selectors.story.spec.ts) |
+| A keyboard user reaches a real button, never a `<div onClick>` | [`src/examples/LoginForm.tsx`](src/examples/LoginForm.tsx) | [`keyboard`](e2e/keyboard.story.spec.ts) |
+| Optional wrapper: role gives identity, test id when none fits | [`src/examples/PromoBanner.tsx`](src/examples/PromoBanner.tsx) | [`promo-banner`](tests/component/promo-banner.story.test.tsx), [`selectors`](e2e/selectors.story.spec.ts) |
 
 Two tiers run the examples. Component tests use jsdom and React Testing Library, so you see a query pass or fail in isolation. Browser journeys use Playwright with an axe pass, so you see the same contrast in a real DOM. Both tiers write HTML reports to [docs/component-stories.html](docs/component-stories.html) and [docs/e2e-stories.html](docs/e2e-stories.html) on every run, through [executable-stories](https://github.com/jagreehal/executable-stories).
 
@@ -350,6 +450,7 @@ Requires Node 20+ and [pnpm](https://pnpm.io/installation).
 ```bash
 pnpm install
 pnpm exec playwright install   # first time only, if browsers are missing
+pnpm lint                      # ESLint + eslint-plugin-testing-library on the suites
 pnpm test                      # component tier: jsdom + React Testing Library
 pnpm test:e2e                  # journey tier: Playwright, auto-starts the demo app
 pnpm typecheck
@@ -357,6 +458,8 @@ pnpm dev                       # open http://localhost:5173 and read both versio
 ```
 
 After `pnpm test` or `pnpm test:e2e`, open [docs/component-stories.html](docs/component-stories.html) and [docs/e2e-stories.html](docs/e2e-stories.html) for the generated story reports.
+
+CI runs lint, typecheck, the component suite, and the e2e suite on every push and pull request through [`.github/workflows/ci.yml`](.github/workflows/ci.yml), so a selector that stops proving its point fails the build before anyone reads it. The lint step uses [`eslint-plugin-testing-library`](https://github.com/testing-library/eslint-plugin-testing-library), so the repo enforces the query habits it argues for.
 
 ## When a test id is the right call
 
@@ -377,11 +480,12 @@ The escape hatch earns its place for:
 - repeated items that a user-facing name cannot disambiguate, keyed on a stable business identifier like `data-testid="product-card-wool-socks"` or `data-testid="line-item-SKU-8472"`, never `item-2` or a database primary key
 - third-party widgets whose internal DOM you do not own, after you give the wrapper you own an accessible role and name
 - structural hooks that expose no useful role, label, or name, such as a legacy container you need to scope into before you can assert on real user-facing content
+- a decorative wrapper that renders only when an optional value is set and carries no role of its own, where the test id is the only way to prove it is present or gone
 - legacy rescue work, where you need a stable hook today and a markup fix will land later
 
 Name it by meaning, in kebab-case: `payment-summary`, `checkout-primary-action`. Never `btn-1`, `test`, or `blue-wrapper-left-column-v2`.
 
-## Three things the debate usually skips
+## What the debate usually skips
 
 **Most objections are about maintenance, not semantics.** If you inline selectors in hundreds of tests, you will hate changing them. That is a real problem. Solve it with a page object, screen object, or selectors module. Use the same translation helper the app uses. Scope to the row or the dialog before you mint a new id. Do not solve every maintenance problem with `data-testid`.
 
@@ -398,6 +502,20 @@ class ReviewPage {
 ```
 
 **Stripping test ids from production is a team decision, not a rule.** Keep them everywhere and one suite runs in CI, staging, and against production. Strip them from public builds and your production monitoring needs user-facing selectors instead. Or use a custom attribute like `data-cy`, which Playwright can be configured to read. The name matters less than the discipline around it.
+
+**A role query costs more than a test id, and at scale that is real.** `getByRole` walks the DOM and computes the accessibility tree, so a large jsdom suite that re-queries by role thousands of times pays for it. That is an argument for a hybrid strategy, not for abandoning roles. Prove a control is reachable by role or label once, in the test that owns that component. In long flows that touch the same control repeatedly, drive it through a page object whose internals can use the faster handle. You keep the fidelity where it matters and stop re-walking the tree four hundred times.
+
+**A broken selector after a copy change is information, not a verdict.** When the button text changes from "Save" to "Submit" and a role-and-name query breaks, that is one of two things. Either the contract changed on purpose and the test should change with it, which is the test doing its job. Or the copy churns constantly and you want a stable handle, which is a signal to wrap the selector in a page object or move the contract behind a test id. Neither case proves role queries are wrong. It tells you where the stable contract belongs.
+
+## Further reading
+
+The guiding principle behind all of this: the more your tests resemble the way your software is used, the more confidence they give you. The sources worth reading in full:
+
+- [Testing Library query priority](https://testing-library.com/docs/queries/about#priority) — the ranked order this repo follows, with `getByTestId` last.
+- [Kent C. Dodds, Common mistakes with React Testing Library](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library) — why `getByTestId` is a last resort and what to reach for first.
+- [Kent C. Dodds, Avoid the Test User](https://kentcdodds.com/blog/avoid-the-test-user) — tests should use your app the way a real user or a developer does, not a third "test user" who finds things by id.
+- [Test IDs are an a11y smell](https://tkdodo.eu/blog/test-ids-are-an-a11y-smell) — the post this repo argues with and mostly agrees with.
+- [Playwright locators](https://playwright.dev/docs/locators) — prefer user-facing locators, with the test-id escape hatch documented on the same page.
 
 ## The bottom line
 
