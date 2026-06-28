@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { CheckoutButton } from './examples/CheckoutButton'
+import { DatePickerFieldById, DatePickerFieldGood } from './examples/DatePickerField'
 import { IconButtonBad, IconButtonGood } from './examples/IconButton'
 import { LocalizedCheckoutById, LocalizedCheckoutGood } from './examples/LocalizedActions'
 import { LoadingPanel, LoadingPanelDecorative } from './examples/LoadingSpinner'
@@ -12,13 +13,24 @@ import {
   WrapperSoup,
 } from './examples/PaymentStatus'
 import { ProductListBad, ProductListBySku, ProductListGood } from './examples/ProductList'
+import { PromoBanner, PromoRibbonBuggy, PromoRibbonById } from './examples/PromoBanner'
 import { ReviewActionsById, ReviewActionsGood } from './examples/ReviewActions'
+import {
+  ReviewsFilterAcceptable,
+  ReviewsSectionGood,
+  ReviewsSectionLabelledForTest,
+} from './examples/ReviewsSection'
 import { SalesChart, SalesChartById } from './examples/SalesChart'
 import {
   SaveButtonsGenericIds,
   SaveButtonsMeaningfulIds,
   SaveButtonsRole,
 } from './examples/SaveButtons'
+import {
+  SearchInputAriaLabel,
+  SearchInputBad,
+  SearchInputGood,
+} from './examples/SearchInput'
 import { WidgetDialogBad, WidgetDialogGood } from './examples/WidgetDialog'
 
 /** A labelled landmark so Playwright can scope queries with getByRole('region', { name }). */
@@ -131,6 +143,52 @@ export function App() {
 
       <Demo name="Wrapper soup (bad test ids)">
         <WrapperSoup />
+      </Demo>
+      <Pair>
+        <Demo name="Reviews section (heading is the name)">
+          <ReviewsSectionGood />
+        </Demo>
+        <Demo name="Reviews section (aria-label for tests)">
+          <ReviewsSectionLabelledForTest />
+        </Demo>
+      </Pair>
+      <Demo name="Reviews filter (aria-label is the right call)">
+        <ReviewsFilterAcceptable />
+      </Demo>
+
+      <Demo name="Search input (sr-only label)">
+        <SearchInputGood />
+      </Demo>
+      <Pair>
+        <Demo name="Search input (aria-label)">
+          <SearchInputAriaLabel />
+        </Demo>
+        <Demo name="Search input (placeholder only)">
+          <SearchInputBad />
+        </Demo>
+      </Pair>
+
+      <Pair>
+        <Demo name="Date picker (named from the wrapper)">
+          <DatePickerFieldGood />
+        </Demo>
+        <Demo name="Date picker (test id fallback)">
+          <DatePickerFieldById />
+        </Demo>
+      </Pair>
+
+      <Pair>
+        <Demo name="Promo banner (role gives identity)">
+          <PromoBanner message="50% off today" />
+        </Demo>
+        <Demo name="Promo ribbon (test id is the only handle)">
+          <PromoRibbonById message="50% off today" />
+        </Demo>
+      </Pair>
+      <Demo name="Promo ribbon (buggy — text inversion lies)">
+        {/* No message: the wrapper still mounts as an empty box. A text-only
+            inversion reports green; only a test id or role query catches it. */}
+        <PromoRibbonBuggy />
       </Demo>
       <Pair>
         <Demo name="Review action (page object + role)">

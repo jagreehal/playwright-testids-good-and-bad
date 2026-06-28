@@ -1,8 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
 
-// Unmount everything between tests so queries never see a stale render.
-afterEach(() => {
-  cleanup()
-})
+// With vitest `globals: true`, @testing-library/react registers its own afterEach
+// cleanup on import, so a manual cleanup here is redundant. The testing-library
+// lint rule (no-manual-cleanup) flags it, and the repo follows its own advice.

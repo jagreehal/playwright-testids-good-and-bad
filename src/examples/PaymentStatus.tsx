@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 /**
  * GOOD — a named landmark, no test id needed.
  *
@@ -5,12 +7,14 @@
  * an accessible name. A screen-reader user navigates to it by that name, and a
  * role query finds it the same way:
  *   getByRole('region', { name: 'Payment status' })
- * The id locates nothing here because the role already does.
+ * The id locates nothing here because the role already does, and useId() keeps
+ * the heading id unique when the section appears more than once on a page.
  */
 export function PaymentStatus({ status = 'Payment complete' }: { status?: string }) {
+  const headingId = useId()
   return (
-    <section aria-labelledby="payment-status-heading" className="rounded border p-4">
-      <h2 id="payment-status-heading" className="font-medium">
+    <section aria-labelledby={headingId} className="rounded border p-4">
+      <h2 id={headingId} className="font-medium">
         Payment status
       </h2>
       <p>{status}</p>

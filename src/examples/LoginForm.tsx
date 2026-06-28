@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 
 export type Credentials = { email: string; password: string }
 
@@ -15,6 +15,8 @@ export type Credentials = { email: string; password: string }
  */
 export function LoginFormGood({ onSubmit }: { onSubmit?: (c: Credentials) => void }) {
   const [error, setError] = useState('')
+  const emailId = useId()
+  const passwordId = useId()
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -32,13 +34,13 @@ export function LoginFormGood({ onSubmit }: { onSubmit?: (c: Credentials) => voi
   return (
     <form aria-label="Sign in" onSubmit={handleSubmit} className="grid gap-3 max-w-sm">
       <div className="grid gap-1">
-        <label htmlFor="login-email">Email address</label>
-        <input id="login-email" name="email" type="email" className="border rounded px-2 py-1" />
+        <label htmlFor={emailId}>Email address</label>
+        <input id={emailId} name="email" type="email" className="border rounded px-2 py-1" />
       </div>
       <div className="grid gap-1">
-        <label htmlFor="login-password">Password</label>
+        <label htmlFor={passwordId}>Password</label>
         <input
-          id="login-password"
+          id={passwordId}
           name="password"
           type="password"
           className="border rounded px-2 py-1"
@@ -89,7 +91,7 @@ export function LoginFormBad({ onSubmit }: { onSubmit?: (c: Credentials) => void
         onChange={(e) => setPassword(e.target.value)}
         className="border rounded px-2 py-1"
       />
-      {/* eslint-disable-next-line — intentionally bad: a div pretending to be a button */}
+      {/* intentionally bad: a div pretending to be a button, no role, no keyboard access */}
       <div
         data-testid="login-submit-btn"
         onClick={() => onSubmit?.({ email, password })}
