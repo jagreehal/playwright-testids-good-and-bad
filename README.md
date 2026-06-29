@@ -1,16 +1,16 @@
 # data-testid, good and bad, side by side
 
-> Teaching repo. Every UI pattern has a good variant (semantic markup) and a bad one (test ids only). `pnpm test` runs component tests in jsdom; `pnpm test:e2e` runs Playwright + axe in a real browser. You need Node 20+ and pnpm. After a test run, open [docs/component-stories.html](docs/component-stories.html) and [docs/e2e-stories.html](docs/e2e-stories.html).
+> Teaching repo. Each UI pattern ships twice: a good variant (semantic markup) and a bad one (test ids only). Plain HTML examples sit next to a shadcn/ui (base) section for teams on component libraries: real buttons and dialogs, but you still wire labels, titles, and accessible names. `pnpm test` runs component tests in jsdom; `pnpm test:e2e` runs Playwright + axe in a real browser. You need Node 20+ and pnpm. After a test run, open [docs/component-stories.html](docs/component-stories.html) and [docs/e2e-stories.html](docs/e2e-stories.html).
 
-Ask three engineers how a test should find a button and you will get a fight.
+Ask three engineers how a test should find a button and you will get three contentious answers.
 
-One camp has been burned by flaky selectors. They watched a CSS refactor or a one-word copy change turn a green suite red overnight, and they reached for `data-testid` because it is the one handle nobody edits by accident. A QA lead with fifteen years on the job will tell you that text on a marketing site changes daily, that localization breaks every text selector you own, and that a clickable arrow icon has no text to match in the first place. To this camp a test id is not a smell. It is the thing that keeps the suite alive on a Monday after the design team shipped over the weekend.
+Teams that have lost time to flaky selectors watched a CSS refactor or a one-word copy change turn a green suite red overnight. They reached for `data-testid` because it is the one handle nobody edits by accident. A QA lead with fifteen years on the job will tell you that marketing copy changes daily, that localization breaks text selectors, and that a clickable arrow icon has no text to match. For that position, a test id is a maintenance choice, not an accessibility trade-off. It keeps the suite stable when design ships over the weekend.
 
-The other camp says the test id is the smell. [Dominik Dorfmeister](https://tkdodo.eu/blog/test-ids-are-an-a11y-smell) (TkDodo) has not typed one in over a decade, and his objection is specific: a test that clicks `getByTestId('submit')` passes whether the element is a real `<button>` or a `<div>` that no keyboard and no screen reader can reach. Testing Library encodes the same position in its query priority, where the test id ranks dead last, behind role, label, and visible text. A role-based query does two jobs in one line. It finds the element, and it proves a real user could find it too.
+The other position treats test ids as an accessibility concern. [Dominik Dorfmeister](https://tkdodo.eu/blog/test-ids-are-an-a11y-smell) (TkDodo) has not typed one in over a decade, and his objection is specific: a test that clicks `getByTestId('submit')` passes whether the element is a real `<button>` or a `<div>` that no keyboard and no screen reader can reach. Testing Library encodes the same position in its query priority, where the test id ranks dead last, behind role, label, and visible text. A role-based query does two jobs in one line. It finds the element, and it proves a real user could find it too.
 
-Then [Playwright's locator guide](https://playwright.dev/docs/locators) pours fuel on the fire. The intro tells you to prefer user-facing locators like `getByRole`. The [test id section](https://playwright.dev/docs/locators#locate-by-test-id) on the same page calls test ids "the most resilient way of testing" because they survive text and role changes. Both sentences are true. That contradiction is why the thread never dies, and why a developer can quote the docs at you no matter which side they started on.
+[Playwright's locator guide](https://playwright.dev/docs/locators) documents both views on the same page. The intro tells you to prefer user-facing locators like `getByRole`. The [test id section](https://playwright.dev/docs/locators#locate-by-test-id) calls test ids "the most resilient way of testing" because they survive text and role changes. Both statements are defensible. That tension is why the debate persists, and why practitioners can cite official docs regardless of where they stand.
 
-This repo settles the fight the only honest way: it builds every surface twice, a good semantic version and a bad test-id-only version, then runs the same tests against both so you watch the disagreement resolve in your terminal.
+This repo builds every surface twice, runs the same tests against both, and shows the outcome in your terminal. Scroll to [shadcn/ui (base)](#shadcnui-base--accessible-primitives-application-semantics) if your stack already ships real primitives.
 
 ## Where this lands
 
@@ -49,7 +49,7 @@ The asymmetry between the top of that chart and the bottom is the whole lesson. 
 
 ## The seven moves to watch for
 
-Reading about this settles nothing, so the suites make it concrete. Seven patterns recur.
+Documentation alone rarely resolves the disagreement, so the suites make it concrete. Seven patterns recur in the plain-HTML examples. Three more apply if you ship shadcn on base.
 
 ### 1. The bad selector passes anyway
 
@@ -155,7 +155,7 @@ axe and role queries catch different bugs. Here the label selector is the safety
 
 ### 5. The aria-label that exists only for the test
 
-This one looks like the accessible choice and is the opposite. The reviews section already has a heading that names it. You want a stable handle, you have read that test ids are a smell, so you add `aria-label="reviews-section"` and grab the region by that name. You just replaced the heading with a slug in the accessibility tree, because aria-label outranks the visible heading when the browser computes the name.
+This one looks like the accessible choice and is the opposite. The reviews section already has a heading that names it. You want a stable handle, you have read TkDodo's case against test ids, so you add `aria-label="reviews-section"` and grab the region by that name. You just replaced the heading with a slug in the accessibility tree, because aria-label outranks the visible heading when the browser computes the name.
 
 ```tsx
 // src/examples/ReviewsSection.tsx (bad)
@@ -193,7 +193,7 @@ Role queries reject the div because it has no button role. The keyboard test sho
 
 ### 7. The negative test that proves nothing
 
-This is the thread's strongest pro-test-id case. A wrapper renders only when an optional prop is set, and its only content is that same optional text. The common advice is to test it by text, then invert the query for the absent case. The inversion proves nothing on its own. With the text gone, a text query cannot tell an absent wrapper from a present-but-empty one, so a bug that leaves an empty box on screen still reports green.
+This is the strongest pro-test-id case in the repo. A wrapper renders only when an optional prop is set, and its only content is that same optional text. The common advice is to test it by text, then invert the query for the absent case. The inversion proves nothing on its own. With the text gone, a text query cannot tell an absent wrapper from a present-but-empty one, so a bug that leaves an empty box on screen still reports green.
 
 ```tsx
 // tests/component/promo-banner.story.test.tsx
@@ -208,6 +208,61 @@ Give the element a role and the absence becomes provable. A promo banner is an a
 expect(screen.queryByRole('status')).toBeNull()         // role gives identity: absence asserts the element
 expect(screen.queryByTestId('promo-ribbon')).toBeNull() // no role fits: the test id is the only honest handle
 ```
+
+## shadcn/ui (base) — accessible primitives, application semantics
+
+[shadcn/ui](https://ui.shadcn.com) on **base** (`@base-ui/react`) ships real `<button>` elements, dialog focus traps, and combobox keyboard nav. You wire `FieldLabel`, `DialogTitle`, `aria-label` on icon buttons, and `Alert` for errors. The plain-HTML examples show div soup. These four show what breaks when the primitive works and the name does not.
+
+### 8. The primitive query passes, the named query fails
+
+A shadcn icon button without `aria-label` is still a real button. `getByRole('button')` finds it. `getByRole('button', { name: 'Delete item' })` does not. A test id passes. Screen readers hear nothing.
+
+```tsx
+// src/examples/shadcn/ShadcnIconButton.tsx (bad)
+<Button size="icon" data-testid="shadcn-delete-btn"><Trash2 /></Button>
+
+// good: application provides the name, the icon is decorative
+<Button size="icon" aria-label="Delete item"><Trash2 data-icon="inline-start" aria-hidden="true" /></Button>
+```
+
+```tsx
+expect(screen.getByRole('button')).toBeInTheDocument()                        // primitive works
+expect(screen.queryByRole('button', { name: 'Delete item' })).toBeNull()       // name missing
+await user.click(screen.getByTestId('shadcn-delete-btn'))                       // test id hides the gap
+```
+
+### 9. Keyboard works, labels do not
+
+A shadcn login with `Input` and `Button` but no `FieldLabel` keeps Tab and Enter on submit. `getByLabel` returns nothing. Labels are your code, not shadcn's.
+
+```ts
+// e2e/shadcn-keyboard.story.spec.ts (bad shadcn login)
+await region.getByPlaceholder('Password').focus()
+await page.keyboard.press('Tab')
+await expect(region.getByRole('button', { name: 'Sign in' })).toBeFocused()   // keyboard works
+await expect(region.getByLabel('Email address')).toHaveCount(0)               // labels do not
+```
+
+Query by name, not just role type. `getByRole('button')` alone is not enough.
+
+### 10. DialogTitle is not optional
+
+`Dialog` portals to `document.body`. Query at page scope: `page.getByRole('dialog', { name: 'Widget' })`, not inside the demo region. Without `DialogTitle`, focus management still works but the named dialog query fails. axe flags the same gap, a serious `aria-dialog-name` violation, so here the two agree. Reach for `getByRole('dialog', { name })` anyway: it pins the exact name and needs no axe pass.
+
+```tsx
+// src/examples/shadcn/ShadcnWidgetDialog.tsx (good)
+<DialogContent>
+  <DialogHeader>
+    <DialogTitle>Widget</DialogTitle>
+    <DialogDescription>The widget is open.</DialogDescription>
+  </DialogHeader>
+</DialogContent>
+
+// subtle: title present but visually hidden
+<DialogTitle className="sr-only">Widget</DialogTitle>
+```
+
+Scope demo regions with `exact: true` in Playwright. `shadcn widget dialog (good)` substring-matches `Widget dialog (good)` without it.
 
 ## More good and bad pairs
 
@@ -434,6 +489,10 @@ Each component exports its good and bad variants, paired with the tests that pro
 | A third-party combobox named from the wrapper you own | [`src/examples/DatePickerField.tsx`](src/examples/DatePickerField.tsx) | [`date-picker-field`](tests/component/date-picker-field.story.test.tsx), [`selectors`](e2e/selectors.story.spec.ts) |
 | A keyboard user reaches a real button, never a `<div onClick>` | [`src/examples/LoginForm.tsx`](src/examples/LoginForm.tsx) | [`keyboard`](e2e/keyboard.story.spec.ts) |
 | Optional wrapper: role gives identity, test id when none fits | [`src/examples/PromoBanner.tsx`](src/examples/PromoBanner.tsx) | [`promo-banner`](tests/component/promo-banner.story.test.tsx), [`selectors`](e2e/selectors.story.spec.ts) |
+| shadcn login: `FieldLabel` vs placeholder-only `Input` | [`src/examples/shadcn/ShadcnLoginForm.tsx`](src/examples/shadcn/ShadcnLoginForm.tsx) | [`shadcn-login-form`](tests/component/shadcn/shadcn-login-form.story.test.tsx), [`shadcn`](e2e/shadcn.story.spec.ts), [`shadcn-keyboard`](e2e/shadcn-keyboard.story.spec.ts), [`accessibility`](e2e/accessibility.story.spec.ts) |
+| shadcn icon button: `aria-label` vs unnamed icon `Button` | [`src/examples/shadcn/ShadcnIconButton.tsx`](src/examples/shadcn/ShadcnIconButton.tsx) | [`shadcn-icon-button`](tests/component/shadcn/shadcn-icon-button.story.test.tsx), [`shadcn`](e2e/shadcn.story.spec.ts) |
+| shadcn dialog: `DialogTitle` vs missing title (portaled) | [`src/examples/shadcn/ShadcnWidgetDialog.tsx`](src/examples/shadcn/ShadcnWidgetDialog.tsx) | [`shadcn-widget-dialog`](tests/component/shadcn/shadcn-widget-dialog.story.test.tsx), [`shadcn`](e2e/shadcn.story.spec.ts), [`accessibility`](e2e/accessibility.story.spec.ts) |
+| shadcn search: sr-only `FieldLabel` vs placeholder only | [`src/examples/shadcn/ShadcnSearchField.tsx`](src/examples/shadcn/ShadcnSearchField.tsx) | [`shadcn-search-field`](tests/component/shadcn/shadcn-search-field.story.test.tsx), [`shadcn`](e2e/shadcn.story.spec.ts) |
 
 Two tiers run the examples. Component tests use jsdom and React Testing Library, so you see a query pass or fail in isolation. Browser journeys use Playwright with an axe pass, so you see the same contrast in a real DOM. Both tiers write HTML reports to [docs/component-stories.html](docs/component-stories.html) and [docs/e2e-stories.html](docs/e2e-stories.html) on every run, through [executable-stories](https://github.com/jagreehal/executable-stories).
 
@@ -459,13 +518,11 @@ pnpm dev                       # open http://localhost:5173 and read both versio
 
 After `pnpm test` or `pnpm test:e2e`, open [docs/component-stories.html](docs/component-stories.html) and [docs/e2e-stories.html](docs/e2e-stories.html) for the generated story reports.
 
-CI runs lint, typecheck, the component suite, and the e2e suite on every push and pull request through [`.github/workflows/ci.yml`](.github/workflows/ci.yml), so a selector that stops proving its point fails the build before anyone reads it. The lint step uses [`eslint-plugin-testing-library`](https://github.com/testing-library/eslint-plugin-testing-library), so the repo enforces the query habits it argues for.
+CI runs lint, typecheck, the component suite, and the e2e suite on every push and pull request through [`.github/workflows/ci.yml`](.github/workflows/ci.yml), so a selector that stops proving its point fails the build before anyone reads it. The lint step uses [`eslint-plugin-testing-library`](https://github.com/testing-library/eslint-plugin-testing-library), so the repo enforces the query habits it documents.
 
 ## When a test id is the right call
 
-Most teams do not fight about accessibility in the abstract.
-
-They fight about maintenance.
+Most teams do not disagree about accessibility in principle. The contention is maintenance.
 
 Copy changes. Localization swaps strings. A third-party date picker ships a new DOM. Twenty tests break and somebody asks why they did not just use a test id.
 
@@ -487,7 +544,7 @@ Name it by meaning, in kebab-case: `payment-summary`, `checkout-primary-action`.
 
 ## What the debate usually skips
 
-**Most objections are about maintenance, not semantics.** If you inline selectors in hundreds of tests, you will hate changing them. That is a real problem. Solve it with a page object, screen object, or selectors module. Use the same translation helper the app uses. Scope to the row or the dialog before you mint a new id. Do not solve every maintenance problem with `data-testid`.
+**Most objections are about maintenance, not semantics.** If you inline selectors in hundreds of tests, refactors become expensive. That is a real problem. Solve it with a page object, screen object, or selectors module. Use the same translation helper the app uses. Scope to the row or the dialog before you mint a new id. Do not solve every maintenance problem with `data-testid`.
 
 **Page objects hide the choice.** A test id is rarely the abstraction you want spread across the whole suite. Wrap the selector so the test reads like a business flow and the selector can change underneath without touching the test.
 
@@ -514,9 +571,9 @@ The guiding principle behind all of this: the more your tests resemble the way y
 - [Testing Library query priority](https://testing-library.com/docs/queries/about#priority) — the ranked order this repo follows, with `getByTestId` last.
 - [Kent C. Dodds, Common mistakes with React Testing Library](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library) — why `getByTestId` is a last resort and what to reach for first.
 - [Kent C. Dodds, Avoid the Test User](https://kentcdodds.com/blog/avoid-the-test-user) — tests should use your app the way a real user or a developer does, not a third "test user" who finds things by id.
-- [Test IDs are an a11y smell](https://tkdodo.eu/blog/test-ids-are-an-a11y-smell) — the post this repo argues with and mostly agrees with.
+- [Test IDs are an a11y smell](https://tkdodo.eu/blog/test-ids-are-an-a11y-smell) — TkDodo's case for role-first testing; this repo engages with it directly and largely agrees.
 - [Playwright locators](https://playwright.dev/docs/locators) — prefer user-facing locators, with the test-id escape hatch documented on the same page.
 
 ## The bottom line
 
-Role, label, and text give you fidelity: they prove a real user could do what the test did. `data-testid` gives you stability when the user-facing options are dynamic, localized, third-party, or trapped in legacy markup. A suite worth trusting uses both, and the skill is knowing which one this test needs. Every test id should carry a reason: we chose this because it makes the test clearer, more stable, or possible, without pretending it is how a user finds the element. Used that way it is a tool, not a smell. The mistake was never using it. The mistake is using it without thinking.
+Role, label, and text give you fidelity: they prove a real user could do what the test did. `data-testid` gives you stability when the user-facing options are dynamic, localized, third-party, or trapped in legacy markup. A suite worth trusting uses both, and the skill is knowing which one this test needs. Every test id should carry a reason: we chose this because it makes the test clearer, more stable, or possible, without pretending it is how a user finds the element. Used deliberately, it is a legitimate tool. The error is not using one. The error is using one without a documented reason.
