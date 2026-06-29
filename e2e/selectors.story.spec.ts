@@ -46,14 +46,14 @@ test.describe('Selectors in the browser — good vs bad', () => {
     await page.goto('/')
 
     story.when('the good icon button is clicked by its accessible name')
-    const good = page.getByRole('region', { name: 'Icon button (good)' })
+    const good = page.getByRole('region', { name: 'Icon button (good)', exact: true })
     await good.getByRole('button', { name: 'Delete payment' }).click()
 
     story.then('it confirms the action via a status message')
     await expect(good.getByRole('status')).toHaveText('Payment deleted')
 
     story.and('the bad version exposes no button at all — only a test id')
-    const bad = page.getByRole('region', { name: 'Icon button (bad)' })
+    const bad = page.getByRole('region', { name: 'Icon button (bad)', exact: true })
     await expect(bad.getByRole('button')).toHaveCount(0)
     await bad.getByTestId('delete-payment').click()
     await expect(bad.getByTestId('delete-result')).toBeVisible()
@@ -67,14 +67,14 @@ test.describe('Selectors in the browser — good vs bad', () => {
     await page.goto('/')
 
     story.when('the user opens the good widget dialog')
-    const good = page.getByRole('region', { name: 'Widget dialog (good)' })
+    const good = page.getByRole('region', { name: 'Widget dialog (good)', exact: true })
     await good.getByRole('button', { name: 'Open widget' }).click()
 
     story.then('a real dialog with an accessible name appears')
     await expect(good.getByRole('dialog', { name: 'Widget' })).toBeVisible()
 
     story.and('the bad version opens content that is never exposed as a dialog')
-    const bad = page.getByRole('region', { name: 'Widget dialog (bad)' })
+    const bad = page.getByRole('region', { name: 'Widget dialog (bad)', exact: true })
     await bad.getByTestId('open-widget').click()
     await expect(bad.getByTestId('widget-dialog')).toBeVisible()
     await expect(bad.getByRole('dialog')).toHaveCount(0)

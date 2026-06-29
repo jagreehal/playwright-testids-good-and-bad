@@ -31,6 +31,14 @@ import {
   SearchInputBad,
   SearchInputGood,
 } from './examples/SearchInput'
+import { ShadcnIconButtonBad, ShadcnIconButtonGood } from './examples/shadcn/ShadcnIconButton'
+import { ShadcnLoginFormBad, ShadcnLoginFormGood } from './examples/shadcn/ShadcnLoginForm'
+import { ShadcnSearchFieldBad, ShadcnSearchFieldGood } from './examples/shadcn/ShadcnSearchField'
+import {
+  ShadcnWidgetDialogBad,
+  ShadcnWidgetDialogGood,
+  ShadcnWidgetDialogSubtle,
+} from './examples/shadcn/ShadcnWidgetDialog'
 import { WidgetDialogBad, WidgetDialogGood } from './examples/WidgetDialog'
 
 /** A labelled landmark so Playwright can scope queries with getByRole('region', { name }). */
@@ -209,6 +217,53 @@ export function App() {
       <Demo name="Save buttons (meaningful ids)">
         <SaveButtonsMeaningfulIds />
       </Demo>
+
+      <header className="grid gap-1 pt-4 border-t">
+        <h2 className="text-xl font-semibold">
+          shadcn/ui (base) — what the library gives you vs what you wire up
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          shadcn ships real buttons, dialogs, and inputs. Labels, titles, and
+          accessible names are still application code — and tests must check for them.
+        </p>
+      </header>
+
+      <Demo name="shadcn login (good)">
+        <ShadcnLoginFormGood />
+      </Demo>
+      <Demo name="shadcn login (bad)">
+        <ShadcnLoginFormBad />
+      </Demo>
+
+      <Pair>
+        <Demo name="shadcn icon button (good)">
+          <ShadcnIconButtonGood />
+        </Demo>
+        <Demo name="shadcn icon button (bad)">
+          <ShadcnIconButtonBad />
+        </Demo>
+      </Pair>
+
+      <Pair>
+        <Demo name="shadcn widget dialog (good)">
+          <ShadcnWidgetDialogGood />
+        </Demo>
+        <Demo name="shadcn widget dialog (bad)">
+          <ShadcnWidgetDialogBad />
+        </Demo>
+      </Pair>
+      <Demo name="shadcn widget dialog (subtle — sr-only title)">
+        <ShadcnWidgetDialogSubtle />
+      </Demo>
+
+      <Pair>
+        <Demo name="shadcn search (good)">
+          <ShadcnSearchFieldGood />
+        </Demo>
+        <Demo name="shadcn search (bad)">
+          <ShadcnSearchFieldBad />
+        </Demo>
+      </Pair>
     </main>
   )
 }
